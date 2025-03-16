@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waterbody Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #map { height: 90vh; width: 100%; }
+        #yearFilter { margin: 10px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Waterbody Health Classification</h2>
+    <label for="yearFilter">Select Year:</label>
+    <select id="yearFilter"></select>
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map').setView([12.97, 77.59], 10); // Centered on Bengaluru
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        function loadGeoJSON(year) {
+            $.getJSON('waterbody_data.geojson', function(data) {
+                L.geoJSON(data, {
+                    style: function (feature) {
+                        return { color: '#' + feature.properties.color, weight: 2 };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.bindPopup(
+                            `<b>Waterbody:</b> ${feature.properties.water_body_id}<br>
+                            <b>Year:</b> ${feature.properties.year}<br>
+                            <b>Fill %:</b> ${feature.properties.fill_percentage}%<br>
+                            <b>Health:</b> ${feature.properties.health_class}`
+                        );
+                    },
+                    filter: function (feature) {
+                        return feature.properties.year == year;
+                    }
+                }).addTo(map);
+            });
+        }
+
+        function populateYearFilter() {
+            let years = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
+            let select = document.getElementById('yearFilter');
+            years.forEach(year => {
+                let option = document.createElement('option');
+                option.value = year;
+                option.text = year;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', function() {
+                map.eachLayer(layer => {
+                    if (layer instanceof L.GeoJSON) map.removeLayer(layer);
+                });
+                loadGeoJSON(this.value);
+            });
+
+            loadGeoJSON(years[0]); // Load the first year by default
+        }
+
+        populateYearFilter();
+    </script>
+</body>
+</html>
